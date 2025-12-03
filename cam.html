@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>洗衣機三連拍拍貼機 V9</title>
+<style>
+  body {
+    margin: 0;
+    background: #dff3ff;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: "Microsoft JhengHei", sans-serif;
+  }
+
+  .washer {
+    width: 380px;
+    height: 480px;
+    background: #ffffff;
+    border-radius: 24px;
+    border: 6px solid #e0e0e0;
+    box-shadow: 0 10px 32px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 20px;
+  }
+
+  .panel {
+    width: 85%;
+    height: 60px;
+    background: #f3f3f3;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 22px;
+  }
+
+  .door {
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    border: 10px solid #8ea9b8;
+    box-shadow:
+      0 0 12px rgba(0,0,0,0.35),
+      inset 0 0 25px rgba(0,0,0,0.35);
+    background: radial-gradient(circle at 30% 30%, #ffffff, #9ea0a3);
+    overflow: hidden;
+    position: relative;
+  }
+
+  #videoCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  #startBtn {
+    margin-top: 20px;
+    padding: 12px 26px;
+    font-size: 18px;
+    border-radius: 12px;
+    border: none;
+    background: #1976d2;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(25,118,210,0.4);
+  }
+  #startBtn:hover {
+    background: #1259a8;
+  }
+
+  #countdown {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+  }
+  #countNum {
+    font-size: 150px;
+    color: #fff;
+    font-weight: 900;
+    text-shadow: 0 0 20px #000;
+  }
+
+  #video,
+  #captureCanvas,
+  #mergeCanvas {
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="washer">
+  <div class="panel">洗衣中…</div>
+  <div class="door">
+    <canvas id="videoCanvas"></canvas>
+  </div>
+  <button id="startBtn">開始三連拍</button>
+</div>
+
+<video id="video" autoplay playsinline></video>
+<canvas id="captureCanvas"></canvas>
+<canvas id="mergeCanvas"></canvas>
+
+<div id="countdown">
+  <div id="countNum">3</div>
+</div>
+
+<script>
+const video = document.getElementById("video");
+const videoCanvas = document.getElementById("videoCanvas");
+const captureCanvas = document.getElementById("captureCanvas");
+const mergeCanvas = document.getElementById("mergeCanvas");
+const startBtn = document.getElementById("startBtn");
+const countdown = document.getElementById("countdown");
+const countNum = document.getElementById("countNum");
+
+let stream = null;
+let angle = 0;          // 旋轉角度
+let shots = [];         // 三張照片
+let spinning = false;   // 控制動畫 loop
+
+// 啟動流程
+startBtn.onclick = async () => {
+  const ok = confirm("我們將使用相機開始『洗衣機三連拍』，可以嗎？");
+  if (!ok) return;
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+
+    shots = [];
+    spinning = true;
+    animateWasher();        // 開始轉轉轉
+
+    await takeThreeShots(); // 三次 321 + 拍照
+
+    stopCamera();
+    spinning = false;
+
+    mergeAndDownload();     // B + A + B 合併並下載
+  } catch (e) {
+    alert("相機無法啟動或被拒絕權限。");
+  }
+};
+
+// 洗衣機旋轉：圓窗中顯示「正在轉的你」+ 藍遮罩 + 小泡泡
+function animateWasher() {
+  if (!spinning) return;
+  const ctx = videoCanvas.getContext("2d");
+
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  if (!vw || !vh) {
+    requestAnimationFrame(animateWasher);
+    return;
+  }
+
+  const size = 260;
+  videoCanvas.width = size;
+  videoCanvas.height = size;
+  const cx = size / 2;
+  const cy = size / 2;
+
+  ctx.clearRect(0, 0, size, size);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, cx, 0, Math.PI * 2);
+  ctx.clip();
+
+  ctx.translate(cx, cy);
+  ctx.rotate(angle * Math.PI / 180);
+  ctx.translate(-cx, -cy);
+
+  const minSide = Math.min(vw, vh);
+  const sx = (vw - minSide) / 2;
+  const sy = (vh - minSide) / 2;
+  ctx.drawImage(video, sx, sy, minSide, minSide, 0, 0, size, size);
+
+  ctx.fillStyle = "rgba(0, 150, 255, 0.20)";
+  ctx.fillRect(0, 0, size, size);
+
+  // 泡泡變小一點
+  drawBubble(ctx, cx - 60, cy - 70, 16);
+  drawBubble(ctx, cx + 40, cy + 10, 19);
+  drawBubble(ctx, cx - 10, cy + 60, 14);
+
+  ctx.restore();
+
+  // 旋轉速度調快：+4
+  angle = (angle + 4) % 360;
+
+  requestAnimationFrame(animateWasher);
+}
+
+function drawBubble(ctx, x, y, r) {
+  const grd = ctx.createRadialGradient(x - r/3, y - r/3, r*0.2, x, y, r);
+  grd.addColorStop(0, "rgba(255,255,255,0.9)");
+  grd.addColorStop(1, "rgba(255,255,255,0.3)");
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// 三連拍：每次先倒數 321 再拍照
+async function takeThreeShots() {
+  for (let i = 0; i < 3; i++) {
+    await doCountdown();
+    shots.push(captureFromWasher());
+  }
+}
+
+// 倒數 321
+function doCountdown() {
+  return new Promise((resolve) => {
+    let n = 3;
+    countNum.textContent = n;
+    countdown.style.display = "flex";
+
+    const timer = setInterval(() => {
+      n--;
+      if (n === 0) {
+        clearInterval(timer);
+        countdown.style.display = "none";
+        resolve();
+      } else {
+        countNum.textContent = n;
+      }
+    }, 1000);
+  });
+}
+
+// 從洗衣機圓窗擷取一張圖（包含藍遮罩 + 泡泡）
+function captureFromWasher() {
+  const size = 260;
+  captureCanvas.width = size;
+  captureCanvas.height = size;
+  const ctx = captureCanvas.getContext("2d");
+  ctx.drawImage(videoCanvas, 0, 0, size, size);
+  return captureCanvas.toDataURL("image/png");
+}
+
+// 關閉相機
+function stopCamera() {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+  }
+  stream = null;
+}
+
+// B + A + B 合併並下載
+function mergeAndDownload() {
+  const slot = 800;     // 每張照片區域大小
+  const gap = 40;
+  const border = 80;    // 白框加大
+
+  const W = slot + border * 2;
+  const H = slot * 3 + gap * 2 + border * 2;
+
+  mergeCanvas.width = W;
+  mergeCanvas.height = H;
+  const ctx = mergeCanvas.getContext("2d");
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+
+  let loaded = 0;
+
+  shots.forEach((src, index) => {
+    const img = new Image();
+    img.src = src;
+    img.onload = () => {
+      const x = border;
+      const y = border + index * (slot + gap);
+
+      if (index === 1) {
+        drawWasherStyle(ctx, img, x, y, slot);   // 中間：圓形洗衣機窗 A
+      } else {
+        drawSquareStyle(ctx, img, x, y, slot);   // 上下：方形 B
+      }
+
+      loaded++;
+      if (loaded === shots.length) {
+        const link = document.createElement("a");
+        link.download = "washer_photobooth_3shots.png";
+        link.href = mergeCanvas.toDataURL("image/png");
+        link.click();
+      }
+    };
+  });
+}
+
+// 方形 B：白底+藍邊框，照片是方形，裡面是你在洗衣機裡的畫面
+function drawSquareStyle(ctx, img, x, y, size) {
+  const padding = 30;
+  const inner = size - padding * 2;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.15)";
+  ctx.shadowBlur = 16;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle = "#ffffff";
+  roundRect(ctx, x, y, size, size, 32);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.strokeStyle = "#90caf9";
+  ctx.lineWidth = 10;
+  roundRect(ctx, x + 8, y + 8, size - 16, size - 16, 26);
+  ctx.stroke();
+
+  ctx.save();
+  roundRect(ctx, x + padding, y + padding, inner, inner, 20);
+  ctx.clip();
+  ctx.drawImage(img, x + padding, y + padding, inner, inner);
+  ctx.restore();
+}
+
+// 圓形 A：洗衣機窗 + 小泡泡
+function drawWasherStyle(ctx, img, x, y, size) {
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const R = size * 0.38;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.18)";
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 10;
+  ctx.fillStyle = "#f5f5f5";
+  roundRect(ctx, x, y, size, size, 40);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 1.1, 0, Math.PI * 2);
+  ctx.fillStyle = "#90a4ae";
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.fillStyle = "#0277bd";
+  ctx.fill();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 0.9, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(img, cx - R, cy - R, R * 2, R * 2);
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 0.9, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(0,150,255,0.20)";
+  ctx.fill();
+
+  // 泡泡縮小
+  drawBubble(ctx, cx - R*0.45, cy - R*0.4, R*0.13);
+  drawBubble(ctx, cx + R*0.3,  cy + R*0.05, R*0.15);
+  drawBubble(ctx, cx - R*0.1,  cy + R*0.45, R*0.12);
+
+  ctx.lineWidth = R * 0.18;
+  ctx.strokeStyle = "rgba(255,255,255,0.95)";
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 1.02, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+// 通用圓角矩形
+function roundRect(ctx, x, y, w, h, r) {
+  const radius = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + w - radius, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+  ctx.lineTo(x + w, y + h - radius);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+  ctx.lineTo(x + radius, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+</script>
+
+</body>
+</html>
