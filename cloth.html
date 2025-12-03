@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<title>撿襪子反應力小遊戲</title>
+<style>
+    body {
+        margin: 0;
+        background: url("https://github.com/y932004/dorm/blob/main/bg.jpg?raw=true");
+        background-size: cover;
+        background-position: center;
+        font-family: "Noto Sans TC", sans-serif;
+        overflow: hidden;
+        user-select: none;
+    }
+    #game {
+        width: 100%;
+        height: 100vh;
+        position: relative;
+        overflow: hidden;
+    }
+
+    #rope {
+        width: 100%;
+        height: 5px;
+        background: rgba(0,0,0,0.5);
+        position: absolute;
+        top: 40px;
+        left: 0;
+    }
+
+    /* 掉落的襪子圖片（加大版） */
+    .sock {
+        width: 90px;
+        position: absolute;
+        top: 40px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    #scoreBoard, #timer {
+        position: absolute;
+        top: 10px;
+        font-size: 24px;
+        font-weight: bold;
+        color: white;
+        text-shadow: 0 0 5px black;
+    }
+    #scoreBoard { right: 20px; }
+    #timer { left: 20px; }
+
+    #startBtn {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 14px 36px;
+        background: #6ec8ff;
+        color: white;
+        border-radius: 12px;
+        border: none;
+        font-size: 22px;
+        cursor: pointer;
+    }
+
+    #mock {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 42px;
+        font-weight: 900;
+        color: red;
+        display: none;
+        white-space: nowrap;
+        text-shadow: 0 0 8px black;
+    }
+</style>
+</head>
+<body>
+<div id="game">
+    <div id="rope"></div>
+    <div id="scoreBoard">分數：0</div>
+    <div id="timer">10</div>
+    <button id="startBtn">開始遊戲</button>
+    <div id="mock"></div>
+</div>
+
+<script>
+let score = 0;
+let timeLeft = 10; // ← 改成 10 秒
+let gameRunning = false;
+let mock = document.getElementById("mock");
+let game = document.getElementById("game");
+
+const IMG_SRC = "https://github.com/y932004/dorm/blob/main/S.png?raw=true";
+
+function spawnSock() {
+    const sock = document.createElement("img");
+    sock.src = IMG_SRC;
+    sock.className = "sock";
+    sock.style.left = Math.random() * (window.innerWidth - 100) + "px";
+
+    game.appendChild(sock);
+
+    // 滑鼠點一下就加分
+    sock.addEventListener("click", () => {
+        if (!gameRunning) return;
+        score++;
+        document.getElementById("scoreBoard").innerText = "分數：" + score;
+        sock.remove();
+    });
+
+    fall(sock);
+}
+
+function fall(sock) {
+    let y = 40;
+    let fallSpeed = 3 + Math.random() * 3;
+
+    function loop() {
+        if (!gameRunning) { sock.remove(); return; }
+
+        y += fallSpeed;
+        sock.style.top = y + "px";
+
+        if (y > window.innerHeight) {
+            sock.remove();
+            return;
+        }
+        requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+}
+
+function startGame() {
+    score = 0;
+    timeLeft = 10;     // ← 重設為 10 秒
+    mock.style.display = "none";
+    document.getElementById("scoreBoard").innerText = "分數：0";
+    document.getElementById("timer").innerText = "10";
+    document.getElementById("startBtn").style.display = "none";
+
+    gameRunning = true;
+
+    let sockTimer = setInterval(() => {
+        if (!gameRunning) return clearInterval(sockTimer);
+        spawnSock();
+    }, 650);
+
+    let timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById("timer").innerText = timeLeft;
+
+        if (timeLeft <= 0) {
+            gameRunning = false;
+            clearInterval(timer);
+            endGame();
+        }
+    }, 1000);
+}
+
+function endGame() {
+    let msg = "";
+
+    if (score < 5) {
+        msg = "才撿 " + score + " 個？你是剛睡醒？🥲";
+    } else {
+        msg = "不錯喔！你有撿襪子天分😎";
+    }
+
+    mock.innerText = msg;
+    mock.style.display = "block";
+    document.getElementById("startBtn").style.display = "block";
+}
+
+document.getElementById("startBtn").addEventListener("click", startGame);
+</script>
+</body>
+</html>
