@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>自習室找貓咪小遊戲</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .game-container {
+      background: #ffffff;
+      padding: 24px 28px;
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+      max-width: 720px;
+      width: 100%;
+    }
+
+    .title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 16px;
+    }
+
+    .status {
+      font-size: 15px;
+      margin-bottom: 16px;
+      min-height: 1.5em;
+    }
+
+    .status strong {
+      color: #ff9800;
+    }
+
+    .desk-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .chair-card {
+      position: relative;
+      border-radius: 12px;
+      padding: 16px 12px 10px;
+      background: #fafafa;
+      border: 1px solid #e0e0e0;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+      text-align: center;
+    }
+
+    .chair-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+      border-color: #90caf9;
+      background: #ffffff;
+    }
+
+    .chair-card.disabled {
+      cursor: default;
+      opacity: 0.6;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .desk-top {
+      width: 80%;
+      height: 28px;
+      margin: 0 auto 10px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #c5e1a5, #aed581);
+    }
+
+    .desk-legs {
+      display: flex;
+      justify-content: space-between;
+      width: 60%;
+      margin: 0 auto 8px;
+    }
+
+    .desk-leg {
+      width: 6px;
+      height: 18px;
+      border-radius: 3px;
+      background: #8d6e63;
+    }
+
+    .chair-seat {
+      width: 40px;
+      height: 16px;
+      background: #ffe082;
+      border-radius: 8px 8px 4px 4px;
+      margin: 0 auto 3px;
+    }
+
+    .chair-back {
+      width: 28px;
+      height: 10px;
+      border-radius: 6px 6px 0 0;
+      border: 2px solid #ffb74d;
+      border-bottom: none;
+      margin: 0 auto 2px;
+    }
+
+    .chair-legs {
+      display: flex;
+      justify-content: space-between;
+      width: 24px;
+      margin: 0 auto;
+    }
+
+    .chair-leg {
+      width: 4px;
+      height: 10px;
+      border-radius: 2px;
+      background: #6d4c41;
+    }
+
+    .seat-label {
+      margin-top: 8px;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .cat-hint {
+      font-size: 18px;
+      margin-top: 4px;
+    }
+
+    .cat-hint.hidden {
+      opacity: 0;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .chance-info {
+      font-size: 13px;
+      color: #777;
+    }
+
+    .btn {
+      border: none;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      cursor: pointer;
+      background: #1976d2;
+      color: #fff;
+      letter-spacing: 0.03em;
+      transition: background 0.1s ease, transform 0.05s ease, box-shadow 0.1s ease;
+      box-shadow: 0 4px 10px rgba(25, 118, 210, 0.35);
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: #1565c0;
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(25, 118, 210, 0.4);
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 20;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      padding: 18px 20px 16px;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+      text-align: center;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .modal-text {
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 12px;
+    }
+
+    .cat-photo {
+      max-width: 100%;
+      max-height: 260px;
+      border-radius: 12px;
+      object-fit: cover;
+      border: 1px solid #eee;
+      margin-bottom: 12px;
+    }
+
+    .modal-hint {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 600px) {
+      .game-container {
+        margin: 12px;
+        padding: 18px 16px;
+      }
+
+      .desk-grid {
+        gap: 12px;
+      }
+
+      .title {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div class="title">自習室找貓咪</div>
+    <div class="subtitle">
+      自習室有四張桌子，傳說今天有一隻貓咪偷跑進來睡覺。<br>
+      你有 <strong>3 次機會</strong>，猜猜牠現在躺在哪張椅子上。
+    </div>
+
+    <div id="status" class="status">
+      輕點其中一張椅子，開始你的「貓咪偵探」任務吧。
+    </div>
+
+    <div class="desk-grid" id="deskGrid">
+      <!-- 4 張桌椅 -->
+      <button class="chair-card" data-index="0">
+        <div class="desk-top"></div>
+        <div class="desk-legs">
+          <div class="desk-leg"></div>
+          <div class="desk-leg"></div>
+        </div>
+        <div class="chair-seat"></div>
+        <div class="chair-back"></div>
+        <div class="chair-legs">
+          <div class="chair-leg"></div>
+          <div class="chair-leg"></div>
+        </div>
+        <div class="seat-label">椅子 1</div>
+        <div class="cat-hint hidden">🐱</div>
+      </button>
+
+      <button class="chair-card" data-index="1">
+        <div class="desk-top"></div>
+        <div class="desk-legs">
+          <div class="desk-leg"></div>
+          <div class="desk-leg"></div>
+        </div>
+        <div class="chair-seat"></div>
+        <div class="chair-back"></div>
+        <div class="chair-legs">
+          <div class="chair-leg"></div>
+          <div class="chair-leg"></div>
+        </div>
+        <div class="seat-label">椅子 2</div>
+        <div class="cat-hint hidden">🐱</div>
+      </button>
+
+      <button class="chair-card" data-index="2">
+        <div class="desk-top"></div>
+        <div class="desk-legs">
+          <div class="desk-leg"></div>
+          <div class="desk-leg"></div>
+        </div>
+        <div class="chair-seat"></div>
+        <div class="chair-back"></div>
+        <div class="chair-legs">
+          <div class="chair-leg"></div>
+          <div class="chair-leg"></div>
+        </div>
+        <div class="seat-label">椅子 3</div>
+        <div class="cat-hint hidden">🐱</div>
+      </button>
+
+      <button class="chair-card" data-index="3">
+        <div class="desk-top"></div>
+        <div class="desk-legs">
+          <div class="desk-leg"></div>
+          <div class="desk-leg"></div>
+        </div>
+        <div class="chair-seat"></div>
+        <div class="chair-back"></div>
+        <div class="chair-legs">
+          <div class="chair-leg"></div>
+          <div class="chair-leg"></div>
+        </div>
+        <div class="seat-label">椅子 4</div>
+        <div class="cat-hint hidden">🐱</div>
+      </button>
+    </div>
+
+    <div class="controls">
+      <div id="chanceInfo" class="chance-info">
+        剩餘機會：3
+      </div>
+      <button id="resetBtn" class="btn">再玩一次</button>
+    </div>
+  </div>
+
+  <!-- 成功時跳出照片的 Modal -->
+  <div class="modal-backdrop" id="photoModal">
+    <div class="modal">
+      <div class="modal-title">你運氣很好！</div>
+      <div class="modal-text">
+        你成功找到正在椅子上睡覺的貓咪 🐱
+      </div>
+      <img
+        class="cat-photo"
+        src="cat-example.jpg"
+      />
+      <div class="modal-hint">
+      </div>
+      <button class="btn" id="closeModalBtn">關閉</button>
+    </div>
+  </div>
+
+  <script>
+    const chairs = document.querySelectorAll('.chair-card');
+    const statusEl = document.getElementById('status');
+    const chanceInfoEl = document.getElementById('chanceInfo');
+    const resetBtn = document.getElementById('resetBtn');
+    const modalBackdrop = document.getElementById('photoModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+
+    let catIndex = 0;
+    let attempts = 0;
+    const maxAttempts = 3;
+    let gameOver = false;
+    let guessedCorrect = false;
+
+    function randomCatIndex() {
+      return Math.floor(Math.random() * 4); // 0~3
+    }
+
+    function updateChanceText() {
+      const left = maxAttempts - attempts;
+      chanceInfoEl.textContent = `剩餘機會：${left}`;
+    }
+
+    function setGameOver(message, isFail = false) {
+      gameOver = true;
+
+      if (isFail) {
+        statusEl.innerHTML = `<strong>你不通貓性。</strong> 貓咪今天完全不打算讓你找到。`;
+      } else if (message) {
+        statusEl.innerHTML = message;
+      }
+
+      // 顯示貓咪真正躺在哪張椅子上（秀出 🐱）
+      chairs.forEach((chair) => {
+        const idx = Number(chair.dataset.index);
+        const hint = chair.querySelector('.cat-hint');
+        if (idx === catIndex && hint) {
+          hint.classList.remove('hidden');
+        }
+        chair.classList.add('disabled');
+      });
+    }
+
+    function resetGame() {
+      attempts = 0;
+      gameOver = false;
+      guessedCorrect = false;
+      catIndex = randomCatIndex();
+      updateChanceText();
+      statusEl.textContent = '輕點其中一張椅子，開始你的「貓咪偵探」任務吧。';
+
+      chairs.forEach((chair) => {
+        chair.classList.remove('disabled');
+        const hint = chair.querySelector('.cat-hint');
+        if (hint) {
+          hint.classList.add('hidden');
+        }
+      });
+    }
+
+    function showPhotoModal() {
+      modalBackdrop.classList.add('show');
+    }
+
+    function hidePhotoModal() {
+      modalBackdrop.classList.remove('show');
+    }
+
+    function handleChairClick(e) {
+      if (gameOver) return;
+
+      const chair = e.currentTarget;
+      const index = Number(chair.dataset.index);
+
+      attempts++;
+      updateChanceText();
+
+      if (index === catIndex) {
+        guessedCorrect = true;
+        statusEl.innerHTML = `<strong>你運氣很好！</strong> 你一眼就找到正在睡覺的貓咪。`;
+        setGameOver('', false);
+        showPhotoModal();
+      } else {
+        if (attempts >= maxAttempts && !guessedCorrect) {
+          setGameOver('', true);
+          return;
+        } else {
+          const left = maxAttempts - attempts;
+          statusEl.innerHTML = `這張椅子上現在沒有貓咪，可能跑去別桌了。<br>再試試看吧！（還有 <strong>${left}</strong> 次機會）`;
+        }
+      }
+    }
+
+    // 綁定事件
+    chairs.forEach((chair) => {
+      chair.addEventListener('click', handleChairClick);
+    });
+
+    resetBtn.addEventListener('click', () => {
+      resetGame();
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+      hidePhotoModal();
+    });
+
+    modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === modalBackdrop) {
+        hidePhotoModal();
+      }
+    });
+
+    // 初始化
+    resetGame();
+  </script>
+</body>
+</html>
