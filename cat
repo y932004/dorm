@@ -263,7 +263,8 @@
     </div>
 
     <div class="desk-grid" id="deskGrid">
-      <!-- 4 張桌椅 -->
+
+      <!-- 椅子 1 -->
       <button class="chair-card" data-index="0">
         <div class="desk-top"></div>
         <div class="desk-legs">
@@ -280,6 +281,7 @@
         <div class="cat-hint hidden">🐱</div>
       </button>
 
+      <!-- 椅子 2 -->
       <button class="chair-card" data-index="1">
         <div class="desk-top"></div>
         <div class="desk-legs">
@@ -296,6 +298,7 @@
         <div class="cat-hint hidden">🐱</div>
       </button>
 
+      <!-- 椅子 3 -->
       <button class="chair-card" data-index="2">
         <div class="desk-top"></div>
         <div class="desk-legs">
@@ -312,6 +315,7 @@
         <div class="cat-hint hidden">🐱</div>
       </button>
 
+      <!-- 椅子 4 -->
       <button class="chair-card" data-index="3">
         <div class="desk-top"></div>
         <div class="desk-legs">
@@ -327,6 +331,7 @@
         <div class="seat-label">椅子 4</div>
         <div class="cat-hint hidden">🐱</div>
       </button>
+
     </div>
 
     <div class="controls">
@@ -337,19 +342,20 @@
     </div>
   </div>
 
-  <!-- 成功時跳出照片的 Modal -->
+  <!-- Modal：猜對時顯示貓咪照片 -->
   <div class="modal-backdrop" id="photoModal">
     <div class="modal">
       <div class="modal-title">你運氣很好！</div>
-      <div class="modal-text">
-        你成功找到正在椅子上睡覺的貓咪 🐱
-      </div>
+      <div class="modal-text">你成功找到正在椅子上睡覺的貓咪 🐱</div>
+
+      <!-- ★ 你的圖片網址已加入 ↓↓↓ -->
       <img
         class="cat-photo"
-        src="cat-example.jpg"
+        src="https://github.com/y932004/dorm/blob/main/cat.png?raw=true"
+        alt="找到的貓咪"
       />
-      <div class="modal-hint">
-      </div>
+
+      <div class="modal-hint">（太可愛了吧）</div>
       <button class="btn" id="closeModalBtn">關閉</button>
     </div>
   </div>
@@ -381,12 +387,13 @@
       gameOver = true;
 
       if (isFail) {
-        statusEl.innerHTML = `<strong>你不通貓性。</strong> 貓咪今天完全不打算讓你找到。`;
+        statusEl.innerHTML =
+          `<strong>你不通貓性。</strong> 貓咪今天完全不打算讓你找到。`;
       } else if (message) {
         statusEl.innerHTML = message;
       }
 
-      // 顯示貓咪真正躺在哪張椅子上（秀出 🐱）
+      // 顯示貓咪在哪張椅子
       chairs.forEach((chair) => {
         const idx = Number(chair.dataset.index);
         const hint = chair.querySelector('.cat-hint');
@@ -403,14 +410,13 @@
       guessedCorrect = false;
       catIndex = randomCatIndex();
       updateChanceText();
-      statusEl.textContent = '輕點其中一張椅子，開始你的「貓咪偵探」任務吧。';
+      statusEl.textContent =
+        '輕點其中一張椅子，開始你的「貓咪偵探」任務吧。';
 
       chairs.forEach((chair) => {
         chair.classList.remove('disabled');
         const hint = chair.querySelector('.cat-hint');
-        if (hint) {
-          hint.classList.add('hidden');
-        }
+        if (hint) hint.classList.add('hidden');
       });
     }
 
@@ -433,40 +439,32 @@
 
       if (index === catIndex) {
         guessedCorrect = true;
-        statusEl.innerHTML = `<strong>你運氣很好！</strong> 你一眼就找到正在睡覺的貓咪。`;
+        statusEl.innerHTML =
+          `<strong>你運氣很好！</strong> 你一眼就找到正在睡覺的貓咪。`;
         setGameOver('', false);
         showPhotoModal();
       } else {
         if (attempts >= maxAttempts && !guessedCorrect) {
           setGameOver('', true);
-          return;
         } else {
           const left = maxAttempts - attempts;
-          statusEl.innerHTML = `這張椅子上現在沒有貓咪，可能跑去別桌了。<br>再試試看吧！（還有 <strong>${left}</strong> 次機會）`;
+          statusEl.innerHTML = `這張椅子上沒有貓咪，再找找看！<br>剩下 <strong>${left}</strong> 次機會。`;
         }
       }
     }
 
-    // 綁定事件
     chairs.forEach((chair) => {
       chair.addEventListener('click', handleChairClick);
     });
 
-    resetBtn.addEventListener('click', () => {
-      resetGame();
-    });
+    resetBtn.addEventListener('click', resetGame);
 
-    closeModalBtn.addEventListener('click', () => {
-      hidePhotoModal();
-    });
+    closeModalBtn.addEventListener('click', hidePhotoModal);
 
     modalBackdrop.addEventListener('click', (e) => {
-      if (e.target === modalBackdrop) {
-        hidePhotoModal();
-      }
+      if (e.target === modalBackdrop) hidePhotoModal();
     });
 
-    // 初始化
     resetGame();
   </script>
 </body>
