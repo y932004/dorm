@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<title>抓偷吃＋偷情小遊戲</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    font-family: "Microsoft JhengHei", sans-serif;
+  }
+
+  #gameArea {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background-image: url("https://github.com/y932004/dorm/blob/main/%E4%BA%A4%E8%AA%BC%E8%81%BD.png?raw=true");
+    background-size: cover;
+    background-position: center;
+  }
+
+  .target {
+    position: absolute;
+    width: 110px;
+    height: 110px;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+
+  .target:active {
+    transform: scale(0.88);
+  }
+
+  #uiPanel {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.55);
+    border-radius: 8px;
+    color: white;
+    font-size: 18px;
+    z-index: 10;
+  }
+
+  #startBtn {
+    padding: 8px 14px;
+    background: #ff9800;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  #startBtn:hover { background: #f57c00; }
+
+  #gameOverScreen {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    color: white;
+    font-size: 32px;
+    text-align: center;
+    padding-top: 20%;
+    z-index: 20;
+  }
+
+  #restartBtn {
+    padding: 10px 20px;
+    background: #4caf50;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 22px;
+    cursor: pointer;
+    margin-top: 20px;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="gameArea"></div>
+
+<div id="uiPanel">
+  時間：<span id="time">10</span> 秒<br />
+  分數：<span id="score">0</span><br />
+  <button id="startBtn">開始遊戲</button>
+</div>
+
+<div id="gameOverScreen">
+  <div id="finalScore"></div>
+  <button id="restartBtn">再玩一次</button>
+</div>
+
+<script>
+  const gameArea = document.getElementById("gameArea");
+  const scoreEl = document.getElementById("score");
+  const timeEl = document.getElementById("time");
+  const startBtn = document.getElementById("startBtn");
+  const gameOverScreen = document.getElementById("gameOverScreen");
+  const finalScoreEl = document.getElementById("finalScore");
+  const restartBtn = document.getElementById("restartBtn");
+
+  let score = 0;
+  let timeLeft = 10;  // ★ 修改為 10 秒
+  let timer = null;
+  let spawnTimer = null;
+  let gameRunning = false;
+
+  // ★ 更新後的圖片
+  const stealFood = "https://cdn2.ettoday.net/images/2699/d2699778.jpg";
+
+  const cheatingImages = [
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRrmJcncmT6XMAX66rOdySdCfcsRSWWmqg46g&s",
+    "https://image.presslogic.com/girls.presslogic.com/wp-content/uploads/2023/05/2b4c2c9a.jpg?auto=format&w=1053"
+  ];
+
+  // 遊戲角色 = 偷吃 + 兩張偷情
+  const characters = [stealFood, ...cheatingImages];
+
+  // 開始遊戲
+  startBtn.onclick = function () {
+    if (gameRunning) return;
+    gameRunning = true;
+    score = 0;
+    timeLeft = 10;  // ★ 更新秒數
+    scoreEl.textContent = score;
+    timeEl.textContent = timeLeft;
+
+    timer = setInterval(() => {
+      timeLeft--;
+      timeEl.textContent = timeLeft;
+      if (timeLeft <= 0) endGame();
+    }, 1000);
+
+    // 出現速度（維持之前變慢的節奏）
+    spawnTimer = setInterval(spawnCharacter, 1200);
+
+    startBtn.disabled = true;
+  };
+
+  function spawnCharacter() {
+    if (!gameRunning) return;
+
+    const img = document.createElement("img");
+    img.className = "target";
+
+    img.src = characters[Math.floor(Math.random() * characters.length)];
+
+    const maxX = window.innerWidth - 140;
+    const maxY = window.innerHeight - 160;
+    img.style.left = Math.random() * maxX + "px";
+    img.style.top = Math.random() * maxY + "px";
+
+    img.onclick = function () {
+      score++;
+      scoreEl.textContent = score;
+      img.remove();
+    };
+
+    gameArea.appendChild(img);
+
+    setTimeout(() => img.remove(), 1500);
+  }
+
+  function endGame() {
+    gameRunning = false;
+    clearInterval(timer);
+    clearInterval(spawnTimer);
+    document.querySelectorAll(".target").forEach(e => e.remove());
+
+    finalScoreEl.textContent = `你的得分：${score}`;
+    gameOverScreen.style.display = "block";
+  }
+
+  restartBtn.onclick = function () {
+    gameOverScreen.style.display = "none";
+    startBtn.disabled = false;
+    scoreEl.textContent = "0";
+    timeEl.textContent = "10";
+  };
+</script>
+
+</body>
+</html>
